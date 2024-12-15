@@ -10,7 +10,7 @@
 #include "stm32g0xx_hal.h"
 #include <stdint.h>
 
-
+// Register Addresses
 #define BMP390_CHIP_ID_REG  0x00
 #define BMP390_PWR_CTRL_REG 0x1B
 #define BMP390_OSR_REG 0x1C
@@ -25,6 +25,21 @@
 #define BMP390_FIFO_FILL_LENGTH_0_REG 0x12
 #define BMP390_INT_STATUS_REG 0x11
 #define BMP390_CMD_REG 0x7E
+
+//Default register values.
+#define BMP390_PWR_CTRL 0x00
+#define BMP390_OSR 0x02
+#define BMP390_ODR 0X00
+#define BMP390_INT_CTRL 0x02
+#define BMP390_FIFO_CONFIG_2 0x02
+#define BMP390_FIFO_CONFIG_1 0x02
+#define BMP390_FIFO_WTM_1 0x01 
+#define BMP390_FIFO_WTM_0 0x00
+#define BMP390_FIFO_FILL_LENGTH_1 0x00
+#define BMP390_FIFO_FILL_LENGTH_0 0x00
+#define BMP390_FIFO_DATA 0x00
+#define BMP390_INT_STATUS 0x00
+#define BMP390_CMD 0x00
 
 
 
