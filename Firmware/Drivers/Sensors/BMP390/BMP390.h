@@ -62,22 +62,16 @@ void BMP390_Init(I2C_HandleTypeDef *hi2c);
 
 void BMP390_Write_Reg (I2C_HandleTypeDef *hi2c, 
                         uint8_t reg,
-                        uint8_t value);
+                        uint8_t *value);
 
 void BMP390_Read_Reg (I2C_HandleTypeDef *hi2c,
                         uint8_t reg,
-                        uint8_t value);
+                        uint8_t *value);
 
-// void BMP390_ReadFIFO (I2C_HandleTypeDef *h2ic, 
-//                         float *pressure_buffer);
+void BMP390_ReadFIFO (I2C_HandleTypeDef *h2ic, 
+                        float *pressure_buffer,
+                        uint16_t *num_samples);
                         
-
-
-
-
-
-
-
 
 
 #endif /*BMP390_H*/
