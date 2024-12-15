@@ -33,8 +33,8 @@
 #define BMP390_INT_CTRL 0x02
 #define BMP390_FIFO_CONFIG_2 0x02
 #define BMP390_FIFO_CONFIG_1 0x02
-#define BMP390_FIFO_WTM_1 0x01 
-#define BMP390_FIFO_WTM_0 0x00
+#define BMP390_FIFO_WTM_1 0x00
+#define BMP390_FIFO_WTM_0 0x01
 #define BMP390_FIFO_FILL_LENGTH_1 0x00
 #define BMP390_FIFO_FILL_LENGTH_0 0x00
 #define BMP390_FIFO_DATA 0x00
@@ -69,8 +69,7 @@ void BMP390_Read_Reg (I2C_HandleTypeDef *hi2c,
                         uint8_t value);
 
 // void BMP390_ReadFIFO (I2C_HandleTypeDef *h2ic, 
-//                         float *pressure_buffer, 
-//                         *num_samples)
+//                         float *pressure_buffer);
                         
 
 
