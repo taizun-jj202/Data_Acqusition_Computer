@@ -67,3 +67,11 @@ General Notes :
 - `INT_CTRL` = `[ R 1 x 1 1 1 1 0 ]`
 - `INT_STATUS` = `0x00`
 - `FIFO_CONFIG_1` |= (fifo_press_en << 1) | (fifo_stop_on_full << 1)
+
+
+### ADXL375 (High-G Acc + Gyro) :
+
+
+#### Power sequencing :
+- V_s and V_dd/io  = 1 1 (device in standby mode awaiting command to get measurements )
+- Set D3 in `PWR_CTL` register(`0x2D`)
