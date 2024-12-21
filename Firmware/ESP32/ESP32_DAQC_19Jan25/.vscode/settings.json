@@ -1,9 +1,0 @@
-{
-    "C_Cpp.intelliSenseEngine": "default",
-    "idf.espIdfPath": "/Users/taizunj/esp/v5.3.2/esp-idf",
-    "idf.openOcdConfigs": [
-        "board/esp32s3-builtin.cfg"
-    ],
-    "idf.port": "/dev/tty.debug-console",
-    "idf.toolsPath": "/Users/taizunj/.espressif"
-}
