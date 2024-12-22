@@ -6,7 +6,8 @@
  */
 
 
-
+#ifndef ADXL375_H
+#define ADXL375_H
 #include <Wire.h>
 
 #define ADXL_ADDR 0x53            // ADXL375 I2C address
@@ -78,3 +79,5 @@ void ADXL375_read(uint8_t reg, uint8_t *value, uint8_t bytes);
  * @return int Returns 0 on success, or a negative error code on failure.
  */
 void ADXL375_read_acceleration(int16_t *x, int16_t *y, int16_t *z); 
+
+#endif
