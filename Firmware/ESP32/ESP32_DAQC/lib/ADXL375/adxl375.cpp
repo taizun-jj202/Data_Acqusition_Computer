@@ -36,11 +36,11 @@ void ADXL375_write(uint8_t reg, uint8_t value) {
  * @param[in] bytes Number of bytes to read. 
  * @return Value read from register
  */
-void ADXL375_read(uint8_t reg, uint8_t *value, uint8_t bytes) {
+void ADXL375_read(uint8_t reg, uint8_t *value, uint8_t number_of_bytes) {
   Wire.beginTransmission(ADXL_ADDR);
   Wire.write(reg); // Write register address
   Wire.endTransmission();
-  Wire.requestFrom(ADXL_ADDR, bytes); // Request 1 byte
+  Wire.requestFrom(ADXL_ADDR, number_of_bytes); // Request 1 byte
   *value = Wire.read(); // Read value
 }
 
