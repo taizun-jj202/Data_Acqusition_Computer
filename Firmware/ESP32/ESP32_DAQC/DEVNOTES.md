@@ -16,5 +16,7 @@ Intended to be a file for notekeeping for different sensors.
 ### Dependancies :
 - `Wire.h` library for I2C comm
   
-
+Datasheet and code reference : 
+- [Reference 1](https://howtomechatronics.com/tutorials/arduino/how-to-track-orientation-with-arduino-and-adxl345-accelerometer/) <br>
+- [Reference 2](https://docs.arduino.cc/language-reference/en/functions/communication/wire/requestFrom/) <br>
 **Driver Completed Date** : DEC23, 2024
