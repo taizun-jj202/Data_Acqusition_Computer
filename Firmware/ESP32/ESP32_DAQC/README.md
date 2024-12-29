@@ -16,12 +16,12 @@ All technical reference manuals, datasheets and hardware design guidlines can be
 
 This chip will be interfacing with the following sensors :
 
-| Sr. No | Sensor  | Functionality          | Protocol     |
-| ------ | ------- | ---------------------- | ------------ |
-| 1      | BMP390  | Pressure               | I2C          |
-| 2      | ADXL375 | Accelerometer (3-axis) | I2C          |
-|        |         | Gyro (3-axis)          | I2C          |
-| 3      | LoRa    | RFM95CW                | SPI          |
-| 4      | GPS     | NEO6M                  | UART/SPI/I2C |
+| Sr. No | Sensor  | Functionality          | Protocol     | Status |
+| ------ | ------- | ---------------------- | ------------ | ------ |
+| 1      | BMP390  | Pressure               | I2C          | Done   |
+| 2      | ADXL375 | Accelerometer (3-axis) | I2C          | Done   |
+|        |         | Gyro (3-axis)          | I2C          |        |
+| 3      | LoRa    | RFM95CW                | SPI          |        |
+| 4      | GPS     | NEO6M                  | UART/SPI/I2C |        |
 
 
