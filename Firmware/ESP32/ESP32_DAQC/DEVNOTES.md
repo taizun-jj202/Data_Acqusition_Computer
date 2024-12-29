@@ -20,3 +20,9 @@ Datasheet and code reference :
 - [Reference 1](https://howtomechatronics.com/tutorials/arduino/how-to-track-orientation-with-arduino-and-adxl345-accelerometer/) <br>
 - [Reference 2](https://docs.arduino.cc/language-reference/en/functions/communication/wire/requestFrom/) <br>
 **Driver Completed Date** : DEC23, 2024
+
+
+## BMP390 :
+
+### Notes :
+- Connect SDO to V_dd_io so that I2C address is `0x77`.
