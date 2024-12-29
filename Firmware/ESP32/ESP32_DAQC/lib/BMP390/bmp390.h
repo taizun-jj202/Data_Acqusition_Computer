@@ -46,7 +46,12 @@
 #define BMP390_ODR 0x1D              // Output data rate register
 #define BMP390_CONFIG 0x1F           // Configuration register
 #define BMP390_CALIB_DATA 0x31       // Calibration data register
-#define BMP390_CMD 0x7E              // Command register
+#define BMP390_CMD 0x7E       
+
+
+// BMP390 I2C Address
+#define BMP390_I2C_ADDR_0 0x76 // I2C Address when SDO connected to GND
+#define BMP390_I2C_ADDR_1 0x77 // I2C Address when SDO connected to V_dd_io          // Command register
 
 
 /**
