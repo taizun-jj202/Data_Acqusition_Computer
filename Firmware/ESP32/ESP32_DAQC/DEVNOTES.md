@@ -48,6 +48,8 @@ Usefull links/datasheets :
 
     - For UBX protocol, this is `NAV-POSLLH` packet. 
 
+- Checksum not implemented for received data. 
+- Checksum for UBX messages are precalculated and written in the message. 
 
 ### Software design Notes 
 
