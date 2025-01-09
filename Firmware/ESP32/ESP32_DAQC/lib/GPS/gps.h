@@ -35,9 +35,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
-
 #include <HardwareSerial.h>
 
+// Hardware pins 16 and 17 used to UART.
+// RX -> 16
+// TX -> 17
 HardwareSerial gpsSerial(2);
 
 

@@ -72,7 +72,7 @@ uint8_t disableVTG[] = {
                         0x05,       // NMEA ID
                         0x00,       // rate set to 0 i.e no transmission
                         0x00, 0x00  // CK_A, CK_B 
-};
+};`
 
 uint16_t fletcher8_checksum(const uint8_t *data, size_t len) {
     uint8_t sum1 = 0;
