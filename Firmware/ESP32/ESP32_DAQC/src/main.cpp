@@ -12,6 +12,7 @@
 
 #include <Arduino.h>
 #include "adxl375.h"
+#include "bmp390.h"
 
 
 
@@ -19,6 +20,7 @@ void setup() {
 
   Serial.begin(9600); // Enabling serial communication
   ADXL375_init(); // Initializing the ADXL375 accelerometer
+  // bmp390_init(); // Initializing the BMP390 barometric pressure sensor
 
 }
 

@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "adxl375.h": "c"
-    }
+    },
+    "C_Cpp.default.compilerPath": "/Users/taizunj/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc"
 }
