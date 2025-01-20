@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <Adafruit_ADXL375.h>
+#include "ADXL375.h"
 
 // put function declarations here:
 int myFunction(int, int);
