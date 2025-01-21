@@ -42,9 +42,9 @@
 
 
 
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
 // ADXL375 Function declarations
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
 Adafruit_ADXL375 High_G_accelerometer = Adafruit_ADXL375(0200);  // Defining ADXL375 object
 void ADXL375_init(void);                                         // Initialize ADXL375
 void ADXL375_acc_in_G (
@@ -54,20 +54,43 @@ void ADXL375_acc_in_G (
 );                                                               // Get acceleration data in G
 
 
+
+/**
+ * ------------------------------------------------------------------------------------------------------
+ * GLOBAL Variables 
+ * ------------------------------------------------------------------------------------------------------
+ */
+int16_t AccX, AccY, AccZ = {0};
+
+
+
 void setup() {
 
   Serial.begin(115200);
-  Wire.begin( I2C_SDA, I2C_SCL); // Use this I2C interface instead of default. 
+  Wire.begin( I2C_SDA, I2C_SCL); // Use this I2C interface instead of default.
+
+  // Initialize ADXL375 High-G Accelerometer.
+  ADXL375_init();
+
+
+
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+
+  // Fetching Acceleration data and storing in Global variables
+  ADXL375_acc_in_G ( 
+    &AccX,
+    &AccY,
+    &AccZ
+  );
+
 }
 
 
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
 // ADXL375 Function Definitions :
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
 void ADXL375_init(void){
   if(!High_G_accelerometer.begin()){
     Serial.println("\n ADXL375 not found...");
@@ -94,8 +117,8 @@ void ADXL375_acc_in_G (
     raw_acc_data[i] = Wire.read();
   }
 
-  *x = (int16_t)((raw_acc_data[1] << 8) | (raw_acc_data[0]) );
-  *y = (int16_t)((raw_acc_data[3] << 8) | (raw_acc_data[2]) );
-  *z = (int16_t)((raw_acc_data[5] << 8) | (raw_acc_data[4]) );
+  *x = (((int16_t)((raw_acc_data[1] << 8) | (raw_acc_data[0]) )) * ADXL375_MG2G_MULTIPLIER) ; // Converting raw data to 'G' data via multiplier/
+  *y = (((int16_t)((raw_acc_data[3] << 8) | (raw_acc_data[2]) )) * ADXL375_MG2G_MULTIPLIER);
+  *z = (((int16_t)((raw_acc_data[5] << 8) | (raw_acc_data[4]) )) * ADXL375_MG2G_MULTIPLIER);
 
 }
