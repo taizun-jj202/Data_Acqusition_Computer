@@ -20,7 +20,24 @@
  * Sensor pins : SDA -> 21
  *               SCL -> 22
  * Sensor protocol : I2C
+ *
+ * ------------------------------------------------------------------------
+ *          BMP390 Accelerometer
+ * ------------------------------------------------------------------------
+ * We get following parameters from BMP390 sensor :
+ * 1. Pressure
+ * 2. Temperature
  * 
+ * Sensor gives out Pressure in Pascals(Pa).
+ * Temperature is given out in  Celcius (C). 
+ * 
+ * 
+ * Altitude is calculated from Pressure using the following formula :
+ *      float atmospheric = readPressure() / 100.0F;
+        return 44330.0 * (1.0 - pow(atmospheric / seaLevel, 0.1903));
+
+ * Formula is taken from BMPXXX library. But we will calculate altitude 
+ *  in post-procesing and not onboard the flight computer
  * 
  * 
  * @author Taizun Jafri (jafri.taizun.s@gmail.com)
@@ -31,6 +48,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_ADXL375.h>
+#include <Adafruit_BMP3XX.h>
 #include <stdint.h>
 
 
@@ -54,13 +72,26 @@ void ADXL375_acc_in_G (
 );                                                               // Get acceleration data in G
 
 
+//------------------------------------------------------------------------------------------------------
+// BMP390 Function declarations
+//------------------------------------------------------------------------------------------------------
+Adafruit_BMP3XX BMP390; //Creating BMP390 Instance.
+void BMP390_init();
+void BMP390_Pressure_Temp(
+  double *Temp,
+  double *Pressure
+);
+
 
 /**
  * ------------------------------------------------------------------------------------------------------
  * GLOBAL Variables 
+ * 
+ * - These variables to be saved in the SD Card every cycle.
  * ------------------------------------------------------------------------------------------------------
  */
 int16_t AccX, AccY, AccZ = {0};
+double Pressure, Temperature = {0};     // Pressure Reg -> [23:0] i.e 3 bytes. So we take 4B to be safe
 
 
 
@@ -71,6 +102,9 @@ void setup() {
 
   // Initialize ADXL375 High-G Accelerometer.
   ADXL375_init();
+
+  // Initialize Barometer for Pressure and Temp measurement
+  BMP390_init();
 
 
 
@@ -85,6 +119,12 @@ void loop() {
     &AccZ
   );
 
+  // Fetching Pressure and temperature data to Global buffers
+  BMP390_Pressure_Temp (
+    &Temperature,
+    &Pressure
+  )
+
 }
 
 
@@ -96,7 +136,7 @@ void ADXL375_init(void){
     Serial.println("\n ADXL375 not found...");
   }
   else{
-    Serial.println("Initializing ADXL375 Accelerometer");
+    Serial.println("Initializing ADXL375 Accelerometer to collect 3-axis acceleration data");
   }
 }
 
@@ -120,5 +160,43 @@ void ADXL375_acc_in_G (
   *x = (((int16_t)((raw_acc_data[1] << 8) | (raw_acc_data[0]) )) * ADXL375_MG2G_MULTIPLIER) ; // Converting raw data to 'G' data via multiplier/
   *y = (((int16_t)((raw_acc_data[3] << 8) | (raw_acc_data[2]) )) * ADXL375_MG2G_MULTIPLIER);
   *z = (((int16_t)((raw_acc_data[5] << 8) | (raw_acc_data[4]) )) * ADXL375_MG2G_MULTIPLIER);
+
+}
+
+
+//------------------------------------------------------------------------------------------------------
+// BMP390 Function Definitions :
+//------------------------------------------------------------------------------------------------------
+
+void BMP390_init () {
+
+  if(!BMP390.begin_I2C()) {
+    Serial.println(" BMP390 Barometer not found...");
+  }
+  else
+  {
+    Serial.println("Initializing BMP390 Barometer to collect pressure and temperature data");
+  }
+
+
+  BMP390.setOutputDataRate(BMP3_ODR_100_HZ);                   // Set output rate to 100Hz
+  BMP390.setPressureOversampling(BMP3_OVERSAMPLING_4X);        // Standard resolution 18bit 0.66Pa accuracy
+  BMP390.setTemperatureOversampling(BMP3_OVERSAMPLING_4X);     // 18bit/0.0012 C resolution.
+  BMP390.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);           // Set IIR filter coefficient
+
+  //Logging to be implemented :
+  // 1. BMP390 Output rate : 100Hz
+  // 2. Press oversampling set to : 4x -> 18b/0.66Pa
+  // 3. Temp oversampling set to : 4x -> 18b/0.0012 C 
+
+}
+
+
+void BMP390_Pressure_Temp ( 
+  double *Temp,
+  double *Pressure
+) {
+  *Temp = BMP390.readTemperature();
+  *Pressure = BMP390.readPressure();
 
 }
