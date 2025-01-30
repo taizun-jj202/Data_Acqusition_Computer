@@ -7,11 +7,14 @@
  * 
  * This board is supposed to capture the following data :
  *  
- * | Sr. No | Data        | Type of data | Sensor        | Code Status |
- * | ------ | ----------- | ------------ | ------------- | ----------- |
- * | 1      | Altitude    | Barometer    | BMP390/BMP388 |             |
- * | 2      | Roll, Pitch | Accerelomter | ADXL375       | Done        |
- * | 3      | GPS         | GPS          | Ublox NEO-7M  |             |
+ * | Sr. No | Data        | Type of Sensor | Sensor        | Code Status |
+ * | ------ | ----------- | -------------- | ------------- | ----------- |
+ * | 1      | Altitude    | Barometer      | BMP390/BMP388 | Done        |
+ * | 2      | Roll, Pitch | Accerelomter   | ADXL375       | Done        |
+ * | 3      | GPS         | GPS            | Ublox NEO-7M  | Done        |
+ * | 4      | Yaw         | Gyroscope      | LSM6DS3       |             |
+ * | 5      | Speed       | Pitot Tube     |               |             |
+ * 
  * 
  * ------------------------------------------------------------------------
  *          ADXL375 Accelerometer
@@ -39,6 +42,13 @@
  * Formula is taken from BMPXXX library. But we will calculate altitude 
  *  in post-procesing and not onboard the flight computer
  * 
+ * ------------------------------------------------------------------------
+ *          Ublox NEO-7M GPS 
+ * ------------------------------------------------------------------------
+ * 
+ * GPS Sensor will use UART Port 2. (Serial 2) for data collection.
+ * For debugging, we might use another Serial port if needed. 
+ * 
  * 
  * @author Taizun Jafri (jafri.taizun.s@gmail.com)
  * @date 19/01/2025
@@ -49,6 +59,10 @@
 #include <Wire.h>
 #include <Adafruit_ADXL375.h>
 #include <Adafruit_BMP3XX.h>
+#include <UbxGps.h>        // UBX Protocol Library
+#include <UbxGpsConfig.h> // UBX configuration library used for startup configuration for GPS
+#include <UbxGpsNavPvt.h> // Configure NAVPVT message from GPS Module for UBX protocol.
+#include <HardwareSerial.h>
 #include <stdint.h>
 
 
@@ -57,6 +71,10 @@
 #define I2C_SCL 22                    // I2C SCL Line 
 #define ADXL375_I2C_ADDRESS (0x53)    // ADXL375 I2C address
 #define ADXL375_DATA_X0_REG (0x32)    // This and next 5 regs contain X,Y,Z acceleration respectively.
+#define GPS_BAUDRATE (115200) // GPS Serial2 port baud rate
+#define SERIAL_BAUDRATE (115200) // Serial monitor baud rate
+
+HardwareSerial *gpsSerial = &Serial2;
 
 
 
@@ -83,6 +101,32 @@ void BMP390_Pressure_Temp(
 );
 
 
+//------------------------------------------------------------------------------------------------------
+// Ublox NEO-7M GPS function declarations 
+//------------------------------------------------------------------------------------------------------
+/**
+ * Init function :::
+ *    Initialize GPS by initializaing Serial port 2. 
+ *    Set baud rate -> 115200.
+ *    Set message type to NAVPVT.
+ *    Extract following values :
+ *      - iTOW
+ *      - year
+ *      - month
+ *      - day
+ *      - hour
+ *      - min 
+ *      - sec
+ *      - longitude
+ *      - latitude
+ *      - height
+ */
+void GPS_Init();
+void GPS_Capture_data();
+bool syncGPSmsg(uint8_t GPS_byte); // Function to sync UART message to correct UBX btye
+
+
+
 /**
  * ------------------------------------------------------------------------------------------------------
  * GLOBAL Variables 
@@ -92,19 +136,35 @@ void BMP390_Pressure_Temp(
  */
 int16_t AccX, AccY, AccZ = {0};
 double Pressure, Temperature = {0};     // Pressure Reg -> [23:0] i.e 3 bytes. So we take 4B to be safe
+// GPS values : 
+// Type         Name            Unit  Description (Scaling)
+unsigned long   GPS_iTOW;       //  ms    GPS time of week of the navigation epoch. See the description of iTOW for details.
+unsigned short  GPS_year;       //  y     Year (UTC)
+unsigned char   GPS_month;      //  month Month, range 1..12 (UTC)
+unsigned char   GPS_day;        //  d     Day of month, range 1..31 (UTC)
+unsigned char   GPS_hour;       //  h     Hour of day, range 0..23 (UTC)
+unsigned char   GPS_min;        //  min   Minute of hour, range 0..59 (UTC)
+unsigned char   GPS_sec;        //  s     Seconds of minute, range 0..60 (UTC)
+long            GPS_lon;        //  deg   Longitude (1e-7)
+long            GPS_lat;        //  deg   Latitude (1e-7)
+long            GPS_height;     //  mm    Height above Ellipsoid
+  
 
 
 
 void setup() {
 
-  Serial.begin(115200);
-  Wire.begin( I2C_SDA, I2C_SCL); // Use this I2C interface instead of default.
+  Serial.begin(SERIAL_BAUDRATE);          // 115200
+  Serial2.begin(GPS_BAUDRATE);            // UART connection to GPS.
+  Wire.begin(I2C_SDA, I2C_SCL);           // Use this I2C interface instead of default.
 
   // Initialize ADXL375 High-G Accelerometer.
   ADXL375_init();
-
   // Initialize Barometer for Pressure and Temp measurement
   BMP390_init();
+  // GPS Initialization : 
+  GPS_Init();
+
 
 
 
@@ -123,7 +183,10 @@ void loop() {
   BMP390_Pressure_Temp (
     &Temperature,
     &Pressure
-  )
+  );
+
+  // Capture and parse GPS data :
+  GPS_Capture_data();
 
 }
 
@@ -200,3 +263,82 @@ void BMP390_Pressure_Temp (
   *Pressure = BMP390.readPressure();
 
 }
+
+//------------------------------------------------------------------------------------------------------
+// Ublox NEO-7M GPS Function declarations : 
+//------------------------------------------------------------------------------------------------------
+void GPS_Init(){
+  // Serial.begin(GPS_BAUDRATE);
+  Serial.println("Initializing GPS module...");
+  UbxGpsConfig<HardwareSerial, HardwareSerial> *ubxGpsConfig = new UbxGpsConfig<HardwareSerial, HardwareSerial>(Serial2, Serial1);
+  ubxGpsConfig->setBaudrate(GPS_BAUDRATE);
+  ubxGpsConfig->setMessage(UbxGpsConfigMessage::NavPvt);
+  ubxGpsConfig->setRate(100); //Set rate to 10Hz.
+  ubxGpsConfig->configure();
+   
+}
+
+void GPS_Capture_data() {
+  // Process only the available GPS bytes without waiting
+  while (gpsSerial->available()) {
+    uint8_t GPSbyte = gpsSerial->read();
+    
+    // Process the received byte without blocking
+    if (syncGPSmsg(GPSbyte)) {
+      // GPS message successfully synced and parsed
+      Serial.println("GPS message successfully synced and parsed.");
+    }
+  }
+}
+
+// Sync Message and fill buffer.
+bool syncGPSmsg(uint8_t GPS_byte){
+
+  static uint8_t buffer[92]; // 84B NAVPT msg + 2B for UBX header
+  static uint8_t index = 0;
+  static bool msgSync = false;
+
+  if (!msgSync){
+    
+    // Check first two bytes for msg sync else start sync all over again
+    if ( index == 0 && GPS_byte == 0xB5 ){
+       buffer[index++] = GPS_byte;
+    } 
+    else if ( index == 1 && GPS_byte == 0x65 ){
+      buffer[index++] = GPS_byte;
+      msgSync = true;
+    }
+    else {
+      index = 0 ;
+    }
+
+    return false; 
+  }
+
+  // Read a byte for every iteration of this loop.
+  buffer[index++] = GPS_byte;
+
+  if ( index == 92 ){
+    
+    // Reset index and message now becomes out of sync
+    index = 0;
+    msgSync = false;
+
+    // Validate message and store message :
+    if (buffer[2] == 0x01 && buffer[3] == 0x07) { // NAV-PVT header message 
+      GPS_iTOW   = *((uint32_t *)&buffer[6]);
+      GPS_year   = *((uint16_t *)&buffer[10]);
+      GPS_month  = *((uint8_t  *)&buffer[12]);
+      GPS_day    = *((uint8_t  *)&buffer[13]);
+      GPS_hour   = *((uint8_t  *)&buffer[14]);
+      GPS_min    = *((uint8_t  *)&buffer[15]);
+      GPS_sec    = *((uint8_t  *)&buffer[16]);
+      GPS_lon    = *((uint32_t *)&buffer[30]);
+      GPS_lat    = *((uint32_t *)&buffer[34]);
+      GPS_height = *((uint32_t *)&buffer[38]);
+    }
+  }
+
+  return true;
+}
+
