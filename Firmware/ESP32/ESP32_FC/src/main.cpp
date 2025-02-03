@@ -86,9 +86,9 @@
 #include <Wire.h>
 #include <Adafruit_ADXL375.h>
 #include <Adafruit_BMP3XX.h>
-#include <UbxGps.h>        // UBX Protocol Library
-#include <UbxGpsConfig.h> // UBX configuration library used for startup configuration for GPS
-#include <UbxGpsNavPvt.h> // Configure NAVPVT message from GPS Module for UBX protocol.
+#include <UbxGps.h>                   // UBX Protocol Library
+#include <UbxGpsConfig.h>             // UBX configuration library used for startup configuration for GPS
+#include <UbxGpsNavPvt.h>             // Configure NAVPVT message from GPS Module for UBX protocol.
 #include <HardwareSerial.h>
 #include <stdint.h>
 #include <SD.h>
