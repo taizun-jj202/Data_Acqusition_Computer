@@ -13,7 +13,6 @@
  * | 2      | Roll, Pitch | Accerelomter   | ADXL375       | Done        |
  * | 3      | GPS         | GPS            | Ublox NEO-7M  | Done        |
  * | 4      | Yaw         | Gyroscope      | LSM6DS3       |             |
- * | 5      | Speed       | Pitot Tube     |               |             |
  * 
  * 
  * ------------------------------------------------------------------------
@@ -49,6 +48,34 @@
  * GPS Sensor will use UART Port 2. (Serial 2) for data collection.
  * For debugging, we might use another Serial port if needed. 
  * 
+ * ------------------------------------------------------------------------
+ *          SD Card Data storage
+ * ------------------------------------------------------------------------
+ * 
+ * Avoid using following pins as they are being used internally for 
+ *  SPI Flash and SRAM.
+ * Pins to avoid :
+ * - GPIO 26 (Flash/PSRAM SPICS1)
+ * - GPIO 27 (Flash/PSRAM SPIHD)
+ * - GPIO 28 (Flash/PSRAM SPIWP)
+ * - GPIO 29 (Flash/PSRAM SPICS0)
+ * - GPIO 30 (Flash/PSRAM SPICLK)
+ * - GPIO 31 (Flash/PSRAM SPIQ)
+ * - GPIO 32 (Flash/PSRAM SPID)
+ * 
+ * ESP32 has four SPI interfaces :
+ * - SPI0 (Used Internally)(DO NOT USE) 
+ * - SPI1 (Used Internally)(DO NOT USE)
+ * - SPI2  
+ * - SPI3 (Can be mapped to any four pins)
+ * 
+ * Plan to use SPI2. This channel has its own DMA channel. SPI3 has shared channel.
+ * SPI2 (VSPI) :
+ *  - GPIO 12 -> SCK
+ *  - GPIO 11 -> MOSI
+ *  - GPIO 13 -> MISO
+ *  - GPIO 10 -> CSO
+ * 
  * 
  * @author Taizun Jafri (jafri.taizun.s@gmail.com)
  * @date 19/01/2025
@@ -64,6 +91,8 @@
 #include <UbxGpsNavPvt.h> // Configure NAVPVT message from GPS Module for UBX protocol.
 #include <HardwareSerial.h>
 #include <stdint.h>
+#include <SD.h>
+#include <SPI.h> 
 
 
 // Defines
@@ -71,8 +100,17 @@
 #define I2C_SCL 22                    // I2C SCL Line 
 #define ADXL375_I2C_ADDRESS (0x53)    // ADXL375 I2C address
 #define ADXL375_DATA_X0_REG (0x32)    // This and next 5 regs contain X,Y,Z acceleration respectively.
-#define GPS_BAUDRATE (115200) // GPS Serial2 port baud rate
-#define SERIAL_BAUDRATE (115200) // Serial monitor baud rate
+#define GPS_BAUDRATE (115200)         // GPS Serial2 port baud rate
+#define SERIAL_BAUDRATE (115200)      // Serial monitor baud rate
+// Any pins can be defined for SPI use. 
+#define HSPI_MOSI  4                  // HSPI MOSI pin
+#define HSPI_MISO  5                  // HSPI MISO pin
+#define HSPI_SCK   6                  // HSPI SCK pin
+#define HSPI_CS    7                  // HSPI Chip Select Pin
+
+
+// Defining File for Data Logging
+File DATA_LOG_FILE; // File Object for SD card file.
 
 HardwareSerial *gpsSerial = &Serial2;
 
@@ -126,6 +164,22 @@ void GPS_Capture_data();
 bool syncGPSmsg(uint8_t GPS_byte); // Function to sync UART message to correct UBX btye
 
 
+//------------------------------------------------------------------------------------------------------
+// SD Card and SPI Interfaces
+//------------------------------------------------------------------------------------------------------
+/**
+ * We use the following pins :
+ * SPI2 (VSPI) :
+ *  - GPIO 12 -> SCK
+ *  - GPIO 11 -> MOSI
+ *  - GPIO 13 -> MISO
+ *  - GPIO 10 -> CSO
+ */
+void SD_Card_Init();
+void SD_Save_Data();
+
+
+
 
 /**
  * ------------------------------------------------------------------------------------------------------
@@ -148,7 +202,8 @@ unsigned char   GPS_sec;        //  s     Seconds of minute, range 0..60 (UTC)
 long            GPS_lon;        //  deg   Longitude (1e-7)
 long            GPS_lat;        //  deg   Latitude (1e-7)
 long            GPS_height;     //  mm    Height above Ellipsoid
-  
+// Dataframe separater so that dataframes can be separated.
+uint8_t DATA_FRAME_START_END_BYTE = 0xFF;  
 
 
 
@@ -164,9 +219,8 @@ void setup() {
   BMP390_init();
   // GPS Initialization : 
   GPS_Init();
-
-
-
+  // SD card Initialization
+  SD_Card_Init();
 
 }
 
@@ -187,6 +241,9 @@ void loop() {
 
   // Capture and parse GPS data :
   GPS_Capture_data();
+
+  // Save data to SD Card:
+  SD_Save_Data();
 
 }
 
@@ -342,3 +399,87 @@ bool syncGPSmsg(uint8_t GPS_byte){
   return true;
 }
 
+//------------------------------------------------------------------------------------------------------
+// SD Card and SPI Interfaces
+//------------------------------------------------------------------------------------------------------
+
+void SD_Card_Init() {
+
+  // Check for SD card initialization:
+  if ( !SD.begin(HSPI_CS)){
+    Serial.println("FAILED SD Card initialization...");
+    return;
+  }
+
+  Serial.println("Initializing SD Card...");
+
+  // Open file in append mode and file open check logic : 
+  // Check for errors while opening file
+  DATA_LOG_FILE = SD.open("/SENSOR_DATA.bin", FILE_APPEND);
+  if (!DATA_LOG_FILE) {
+    Serial.println("Error Opening file...");
+  }else {
+    Serial.println("File opened successfully");
+  }
+
+  DATA_LOG_FILE.close();
+
+
+}
+
+// Function to write binary data to SD card for speed purposes :
+void SD_Save_Data () {
+
+
+  DATA_LOG_FILE = SD.open("/sensor_data.csv", FILE_APPEND);
+    if (DATA_LOG_FILE) {
+        // Write raw numeric values, separated by commas (CSV-like format)
+        // DATA_LOG_FILE.print(AccX); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(AccY); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(AccZ); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(Pressure, 2); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(Temperature, 2); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_iTOW); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_year); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_month); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_day); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_hour); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_min); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_sec); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_lon); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.print(GPS_lat); DATA_LOG_FILE.print(',');
+        // DATA_LOG_FILE.println(GPS_height);  // End line
+
+        // Write separater byte of Dataframe:
+        DATA_LOG_FILE.write ( (uint8_t *)&DATA_FRAME_START_END_BYTE, sizeof(DATA_FRAME_START_END_BYTE));
+        //Writing Acceleration (X,Y,Z) in binary format
+        DATA_LOG_FILE.write ( (uint8_t *)&AccX, sizeof(AccX));
+        DATA_LOG_FILE.write ( (uint8_t *)&AccY, sizeof(AccY));
+        DATA_LOG_FILE.write ( (uint8_t *)&AccZ, sizeof(AccZ));
+        // Writing Temp and Pressure
+        DATA_LOG_FILE.write ( (uint8_t *)&Pressure, sizeof(Pressure));
+        DATA_LOG_FILE.write ( (uint8_t *)&Temperature, sizeof(Temperature));
+        // Writing GPS Data fields 
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_iTOW, sizeof(GPS_iTOW));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_year, sizeof(GPS_year));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_month, sizeof(GPS_month));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_day, sizeof(GPS_day));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_hour, sizeof(GPS_hour));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_min, sizeof(GPS_min));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_sec, sizeof(GPS_sec));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_lon, sizeof(GPS_lon));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_lat, sizeof(GPS_lat));
+        DATA_LOG_FILE.write ( (uint8_t *)&GPS_height, sizeof(GPS_height));
+
+        // Dataframe containing data ends with custom dataframe end i.e 0xFF.
+        DATA_LOG_FILE.write ( (uint8_t *)&DATA_FRAME_START_END_BYTE, sizeof(DATA_FRAME_START_END_BYTE));
+
+
+        // Troubleshooting code : 
+        // fprintf(&DATA_LOG_FILE, "%lf,%lf,%ld,%ld,%lf\n", Pressure, Temperature, GPS_lon, GPS_lat, GPS_height);
+
+
+        DATA_LOG_FILE.close();
+    }
+
+}
